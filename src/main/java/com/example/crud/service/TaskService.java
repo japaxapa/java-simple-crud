@@ -4,6 +4,7 @@ import com.example.crud.model.Task;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class TaskService {
@@ -34,6 +35,16 @@ public class TaskService {
         tasks.put(newId, task);
 
         return task;
+    }
+
+    // FIND METHODS
+    public Optional<Task> findById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+
+        Task task = tasks.get(id);
+        return Optional.ofNullable(task);
     }
 
 }
