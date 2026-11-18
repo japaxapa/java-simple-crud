@@ -2,13 +2,11 @@ package com.example.crud.service;
 
 import com.example.crud.model.Task;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class TaskService {
-    private final Map<Long, Task> tasks = new HashMap<>();
+    private final Map<Long, Task> tasks = new LinkedHashMap<>();
 
     private final AtomicLong idGenerator = new AtomicLong(0);
 
@@ -31,9 +29,7 @@ public class TaskService {
 
         Long newId = idGenerator.incrementAndGet();
         task.setId(newId);
-
         tasks.put(newId, task);
-
         return task;
     }
 
@@ -45,6 +41,10 @@ public class TaskService {
 
         Task task = tasks.get(id);
         return Optional.ofNullable(task);
+    }
+
+    public List<Task> findAll() {
+        return new ArrayList<>(tasks.values());
     }
 
 }

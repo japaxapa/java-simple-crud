@@ -4,6 +4,7 @@ import com.example.crud.model.Task;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -88,4 +89,42 @@ public class TaskServiceTest {
         assertTrue(result.isEmpty(), "Optional should be empty for a null ID");
     }
 
+    @Test
+    void findAll_EmptyStoreShouldReturnEmptyList() {
+        List<Task> result = taskService.findAll();
+
+        assertNotNull(result, "List should not be null");
+        assertTrue(result.isEmpty(), "List should be empty");
+    }
+
+    @Test
+    void findAll_MultipleTasksShouldReturnInInsertionOrder() {
+        Task task1 = new Task("First");
+        Task task2 = new Task("Second");
+        Task task3 = new Task("Third");
+        taskService.create(task1);
+        taskService.create(task2);
+        taskService.create(task3);
+
+        List<Task> result = taskService.findAll();
+
+        assertEquals(3, result.size());
+        assertEquals("First", result.get(0).getTitle(), "First item should be 'First'");
+        assertEquals("Second", result.get(1).getTitle(), "Second item should be 'Second'");
+        assertEquals("Third", result.get(2).getTitle(), "Third item should be 'Third'");
+    }
+
+    @Test
+    void findAll_MutatingReturnedListShouldNotAffectStore() {
+        taskService.create(new Task("Task 1"));
+        taskService.create(new Task("Task 2"));
+
+        List<Task> result = taskService.findAll();
+        result.clear();
+
+        assertEquals(0, result.size(), "The copy should be empty now");
+
+        List<Task> freshResult = taskService.findAll();
+        assertEquals(2, freshResult.size(), "The internal store should still have 2 tasks");
+    }
 }
