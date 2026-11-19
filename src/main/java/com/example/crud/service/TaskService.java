@@ -47,4 +47,21 @@ public class TaskService {
         return new ArrayList<>(tasks.values());
     }
 
+    // UPDATE METHODS
+    public Task update(Long id, Task updated) {
+        Task existingTask = tasks.get(id);
+        if (existingTask == null) {
+            throw new NoSuchElementException("Task not found with ID: " + id);
+        }
+        
+        if (updated == null || updated.getTitle() == null || updated.getTitle().isBlank()) {
+            throw new IllegalArgumentException("Task title cannot be blank");
+        }
+
+        existingTask.setTitle(updated.getTitle());
+        existingTask.setDone(updated.isDone());
+
+        return existingTask;
+    }
+
 }

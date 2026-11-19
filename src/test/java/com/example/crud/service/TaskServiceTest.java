@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -126,5 +127,52 @@ public class TaskServiceTest {
 
         List<Task> freshResult = taskService.findAll();
         assertEquals(2, freshResult.size(), "The internal store should still have 2 tasks");
+    }
+
+    @Test
+    void update_ExistingIdShouldUpdateTitleAndDone() {
+        Task original = taskService.create(new Task("Original Title"));
+        Task updatePayload = new Task("Updated Title");
+        updatePayload.setDone(true);
+
+        Task result = taskService.update(original.getId(), updatePayload);
+
+        assertEquals("Updated Title", result.getTitle());
+        assertTrue(result.isDone());
+    }
+
+    @Test
+    void update_ShouldPreserveOriginalId() {
+        Task original = taskService.create(new Task("Original"));
+        Long originalId = original.getId();
+
+        // Even if the update payload has a different ID, it should be ignored
+        Task updatePayload = new Task(999L, "Updated", true);
+
+        Task result = taskService.update(originalId, updatePayload);
+
+        assertEquals(originalId, result.getId(), "ID must not change during update");
+    }
+
+    @Test
+    void update_NonExistentIdShouldThrowNoSuchElementException() {
+        Task updatePayload = new Task("Does not matter");
+
+        NoSuchElementException exception = assertThrows(
+                NoSuchElementException.class,
+                () -> taskService.update(999L, updatePayload)
+        );
+        assertTrue(exception.getMessage().contains("999"));
+    }
+
+    @Test
+    void update_BlankTitleShouldThrowIllegalArgumentException() {
+        Task original = taskService.create(new Task("Original"));
+        Task updatePayload = new Task("   "); // Blank title
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> taskService.update(original.getId(), updatePayload)
+        );
     }
 }
