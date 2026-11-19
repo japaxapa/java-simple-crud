@@ -175,4 +175,29 @@ public class TaskServiceTest {
                 () -> taskService.update(original.getId(), updatePayload)
         );
     }
+
+    @Test
+    void delete_ExistingIdShouldReturnTrueAndRemoveTask() {
+        Task task = taskService.create(new Task("To be deleted"));
+        Long id = task.getId();
+
+        boolean result = taskService.delete(id);
+
+        assertTrue(result, "Delete should return true for existing ID");
+        assertTrue(taskService.findById(id).isEmpty(), "Task should no longer be found");
+    }
+
+    @Test
+    void delete_MissingIdShouldReturnFalse() {
+        boolean result = taskService.delete(999L);
+
+        assertFalse(result, "Delete should return false for missing ID");
+    }
+
+    @Test
+    void delete_NullIdShouldReturnFalse() {
+        boolean result = taskService.delete(null);
+
+        assertFalse(result, "Delete should return false for null ID");
+    }
 }
