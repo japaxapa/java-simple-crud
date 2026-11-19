@@ -1,5 +1,6 @@
 package com.example.crud.service;
 
+import com.example.crud.exception.TaskNotFoundException;
 import com.example.crud.model.Task;
 
 import java.util.*;
@@ -51,7 +52,7 @@ public class TaskService {
     public Task update(Long id, Task updated) {
         Task existingTask = tasks.get(id);
         if (existingTask == null) {
-            throw new NoSuchElementException("Task not found with ID: " + id);
+            throw new TaskNotFoundException(id);
         }
 
         if (updated == null || updated.getTitle() == null || updated.getTitle().isBlank()) {

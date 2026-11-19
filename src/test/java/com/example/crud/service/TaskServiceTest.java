@@ -1,11 +1,11 @@
 package com.example.crud.service;
 
+import com.example.crud.exception.TaskNotFoundException;
 import com.example.crud.model.Task;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -155,14 +155,15 @@ public class TaskServiceTest {
     }
 
     @Test
-    void update_NonExistentIdShouldThrowNoSuchElementException() {
+    void update_NonExistentIdShouldThrowTaskNotFoundException() {
         Task updatePayload = new Task("Does not matter");
 
-        NoSuchElementException exception = assertThrows(
-                NoSuchElementException.class,
+        TaskNotFoundException exception = assertThrows(
+                TaskNotFoundException.class,
                 () -> taskService.update(999L, updatePayload)
         );
-        assertTrue(exception.getMessage().contains("999"));
+        assertTrue(exception.getMessage().contains("999"),
+                "Exception message should contain the missing ID");
     }
 
     @Test
