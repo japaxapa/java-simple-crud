@@ -28,6 +28,8 @@
     </scm>
     <properties>
         <java.version>25</java.version>
+        <tomcat.version>10.1.62</tomcat.version>
+        <asm.version>9.11.1</asm.version>
     </properties>
     <dependencies>
         <dependency>
@@ -39,6 +41,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+            <exclusions>
+                <!-- Remove the old, vulnerable Vaadin android-json artifact -->
+                <exclusion>
+                    <groupId>com.vaadin.external.google</groupId>
+                    <artifactId>android-json</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Source: https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-surefire-plugin -->
@@ -68,7 +77,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
-            <version>3.3.2</version>
+            <version>4.2.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <version>4.2.0</version>
         </dependency>
     </dependencies>
 
