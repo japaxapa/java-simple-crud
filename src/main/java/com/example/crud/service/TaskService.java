@@ -1,22 +1,21 @@
 package com.example.crud.service;
 
+import com.example.crud.repository.TaskRepository;
 import com.example.crud.exception.TaskNotFoundException;
 import com.example.crud.model.Task;
+import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
+@Service
 public class TaskService {
-    private final Map<Long, Task> tasks = new LinkedHashMap<>();
 
-    private final AtomicLong idGenerator = new AtomicLong(0);
+    private final TaskRepository taskRepository;
 
-    // NOTE ON THREAD SAFETY:
-    // HashMap is not thread-safe. If multiple threads try to modify this map
-    // at the exact same time, it can cause data corruption.
-    // Since this is a simple single-threaded learning project, we accept this risk.
-    // In a real multi-threaded application, we would use ConcurrentHashMap
-    // or make our methods "synchronized".
+    public TaskService(TaskRepository taskRepository) {
+        this.taskRepository = taskRepository;
+    }
 
     // CREATE TASK METHOD
     public Task create(Task task) {
@@ -28,10 +27,7 @@ public class TaskService {
             throw new IllegalArgumentException("Task title cannot be blank");
         }
 
-        Long newId = idGenerator.incrementAndGet();
-        task.setId(newId);
-        tasks.put(newId, task);
-        return task;
+        return taskRepository.save(task);
     }
 
     // FIND METHODS
@@ -40,20 +36,16 @@ public class TaskService {
             return Optional.empty();
         }
 
-        Task task = tasks.get(id);
-        return Optional.ofNullable(task);
+        return taskRepository.findById(id);
     }
 
     public List<Task> findAll() {
-        return new ArrayList<>(tasks.values());
+        return taskRepository.findAll();
     }
 
     // UPDATE METHOD
     public Task update(Long id, Task updated) {
-        Task existingTask = tasks.get(id);
-        if (existingTask == null) {
-            throw new TaskNotFoundException(id);
-        }
+        Task existingTask = taskRepository.findById(id).orElseThrow(() -> new TaskNotFoundException(id));
 
         if (updated == null || updated.getTitle() == null || updated.getTitle().isBlank()) {
             throw new IllegalArgumentException("Task title cannot be blank");
@@ -62,7 +54,7 @@ public class TaskService {
         existingTask.setTitle(updated.getTitle());
         existingTask.setDone(updated.isDone());
 
-        return existingTask;
+        return taskRepository.save(existingTask);
     }
 
     // DELETE METHOD
@@ -71,7 +63,10 @@ public class TaskService {
             return false;
         }
 
-        Task removed = tasks.remove(id);
-        return removed != null;
+        if (taskRepository.existsById(id)) {
+            taskRepository.deleteById(id);
+            return true;
+        }
+        return false;
     }
 }
