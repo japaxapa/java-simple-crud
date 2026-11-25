@@ -2,79 +2,75 @@ package com.example.crud.service;
 
 import com.example.crud.exception.TaskNotFoundException;
 import com.example.crud.model.Task;
-import org.junit.jupiter.api.BeforeEach;
+import com.example.crud.repository.TaskRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 @DisplayName("TaskService")
 public class TaskServiceTest {
 
-    private TaskService taskService;
+    @Mock
+    private TaskRepository taskRepository;
 
-    @BeforeEach
-    void setUp() {
-        taskService = new TaskService();
-    }
+    @InjectMocks
+    private TaskService taskService;
 
     @Nested
     @DisplayName("create()")
     class CreateTests {
 
         @Test
-        @DisplayName("should assign an ID and store the task")
-        void create_ShouldAssignIdAndStoreTask() {
-            Task newTask = new Task("Learn Java");
+        @DisplayName("should save the task and return it")
+        void create_ShouldSaveTask() {
+            Task newTask = new Task("Learn Mockito");
+            Task createdTask = new Task(1L, "Learn Mockito", false);
 
-            Task createdTask = taskService.create(newTask);
+            when(taskRepository.save(any(Task.class))).thenReturn(createdTask);
 
-            assertNotNull(createdTask.getId(), "ID should not be null after creation");
-            assertEquals(1L, createdTask.getId(), "First ID should be 1");
-            assertEquals("Learn Java", createdTask.getTitle());
-            assertFalse(createdTask.isDone());
+            Task result = taskService.create(newTask);
+
+            assertEquals(1L, result.getId());
+            assertEquals("Learn Mockito", result.getTitle());
+            verify(taskRepository, times(1)).save(newTask);
         }
 
         @Test
-        @DisplayName("should increment IDs for multiple tasks")
-        void create_MultipleTasksShouldIncrementId() {
-            Task task1 = new Task("Task 1");
-            Task task2 = new Task("Task 2");
-            Task task3 = new Task("Task 3");
+        @DisplayName("should reject null or blank titles")
+        void create_InvalidTitle_ShouldThrowException() {
+            // Null task
+            assertThrows(IllegalArgumentException.class, () -> taskService.create(null));
 
-            taskService.create(task1);
-            taskService.create(task2);
-            taskService.create(task3);
+            // Null title
+            assertThrows(IllegalArgumentException.class, () -> taskService.create(new Task((String) null)));
 
-            assertEquals(1L, task1.getId());
-            assertEquals(2L, task2.getId());
-            assertEquals(3L, task3.getId());
+            // Empty title
+            assertThrows(IllegalArgumentException.class, () -> taskService.create(new Task("")));
+
+            // Whitespace title
+            assertThrows(IllegalArgumentException.class, () -> taskService.create(new Task("   ")));
+
+            verify(taskRepository, never()).save(any());
         }
 
         @Test
         @DisplayName("should reject a null task")
         void create_NullTaskShouldThrowException() {
-            IllegalArgumentException exception = assertThrows(
-                    IllegalArgumentException.class,
-                    () -> taskService.create(null)
-            );
-            assertEquals("Task cannot be null", exception.getMessage());
-        }
-
-        @Test
-        @DisplayName("should reject a blank title")
-        void create_BlankTitleShouldThrowException() {
-            Task taskWithNullTitle = new Task((String) null);
-            Task taskWithEmptyTitle = new Task("");
-            Task taskWithSpacesTitle = new Task("     ");
-
-            assertThrows(IllegalArgumentException.class, () -> taskService.create(taskWithNullTitle));
-            assertThrows(IllegalArgumentException.class, () -> taskService.create(taskWithEmptyTitle));
-            assertThrows(IllegalArgumentException.class, () -> taskService.create(taskWithSpacesTitle));
+            assertThrows(IllegalArgumentException.class, () -> taskService.create(null));
+            verify(taskRepository, never()).save(any());
         }
     }
 
@@ -83,30 +79,36 @@ public class TaskServiceTest {
     class FindByIdTests {
 
         @Test
-        @DisplayName("should return the task for an existing ID")
+        @DisplayName("should return the task from the repository")
         void findById_ExistingIdShouldReturnTask() {
-            Task taskToCreate = new Task("find me");
-            Task createdTask = taskService.create(taskToCreate);
+            Task task = new Task(1L, "Find me", false);
+            when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
 
-            Optional<Task> result = taskService.findById(createdTask.getId());
+            Optional<Task> result = taskService.findById(1L);
 
-            assertTrue(result.isPresent(), "Optional should contain a task");
-            assertEquals(createdTask, result.get(), "Retrieved task should match created task");
+            assertTrue(result.isPresent());
+            assertEquals(task, result.get());
         }
 
         @Test
         @DisplayName("should return empty for a missing ID")
         void findById_MissingIdShouldReturnEmpty() {
-            Optional<Task> result = taskService.findById(999L);
+            Long missingId = 99L;
+            when(taskRepository.findById(missingId)).thenReturn(Optional.empty());
+
+            Optional<Task> result = taskService.findById(missingId);
 
             assertTrue(result.isEmpty(), "Optional should be empty for a missing ID");
+            verify(taskRepository, times(1)).findById(missingId);
         }
+
 
         @Test
         @DisplayName("should return empty for a null ID")
         void findById_NullIdShouldReturnEmpty() {
             Optional<Task> result = taskService.findById(null);
-            assertTrue(result.isEmpty(), "Optional should be empty for a null ID");
+            assertTrue(result.isEmpty());
+            verify(taskRepository, never()).findById(any());
         }
     }
 
@@ -117,43 +119,30 @@ public class TaskServiceTest {
         @Test
         @DisplayName("should return an empty list when store is empty")
         void findAll_EmptyStoreShouldReturnEmptyList() {
+            when(taskRepository.findAll()).thenReturn(Collections.emptyList());
+
             List<Task> result = taskService.findAll();
 
             assertNotNull(result, "List should not be null");
             assertTrue(result.isEmpty(), "List should be empty");
+            verify(taskRepository, times(1)).findAll();
         }
 
         @Test
-        @DisplayName("should return tasks in insertion order")
-        void findAll_MultipleTasksShouldReturnInInsertionOrder() {
-            Task task1 = new Task("First");
-            Task task2 = new Task("Second");
-            Task task3 = new Task("Third");
-            taskService.create(task1);
-            taskService.create(task2);
-            taskService.create(task3);
+        @DisplayName("should return all tasks from the repository")
+        void findAll_ShouldReturnAllTasks() {
+            Task task1 = new Task(1L, "Task 1", false);
+            Task task2 = new Task(2L, "Task 2", true);
+            Task task3 = new Task(3L, "Task 3", true);
+            List<Task> expectedTasks = List.of(task1, task2, task3);
+
+            when(taskRepository.findAll()).thenReturn(expectedTasks);
 
             List<Task> result = taskService.findAll();
 
             assertEquals(3, result.size());
-            assertEquals("First", result.get(0).getTitle(), "First item should be 'First'");
-            assertEquals("Second", result.get(1).getTitle(), "Second item should be 'Second'");
-            assertEquals("Third", result.get(2).getTitle(), "Third item should be 'Third'");
-        }
-
-        @Test
-        @DisplayName("should not be affected by mutations to the returned list")
-        void findAll_MutatingReturnedListShouldNotAffectStore() {
-            taskService.create(new Task("Task 1"));
-            taskService.create(new Task("Task 2"));
-
-            List<Task> result = taskService.findAll();
-            result.clear();
-
-            assertEquals(0, result.size(), "The copy should be empty now");
-
-            List<Task> freshResult = taskService.findAll();
-            assertEquals(2, freshResult.size(), "The internal store should still have 2 tasks");
+            assertEquals(expectedTasks, result);
+            verify(taskRepository, times(1)).findAll();
         }
     }
 
@@ -163,55 +152,62 @@ public class TaskServiceTest {
     class UpdateTests {
 
         @Test
-        @DisplayName("should update the title and done flag")
-        void update_ExistingIdShouldUpdateTitleAndDone() {
-            Task original = taskService.create(new Task("Original Title"));
-            Task updatePayload = new Task("Updated Title");
+        @DisplayName("should update the title and save to repository")
+        void update_ExistingIdShouldUpdateAndSave() {
+            Task existingTask = new Task(1L, "Old Title", false);
+            Task updatePayload = new Task("New Title");
             updatePayload.setDone(true);
 
-            Task result = taskService.update(original.getId(), updatePayload);
+            when(taskRepository.findById(1L)).thenReturn(Optional.of(existingTask));
+            when(taskRepository.save(any(Task.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            assertEquals("Updated Title", result.getTitle());
+            Task result = taskService.update(1L, updatePayload);
+
+            assertEquals("New Title", result.getTitle());
             assertTrue(result.isDone());
+            verify(taskRepository, times(1)).save(existingTask);
         }
 
         @Test
         @DisplayName("should preserve the original ID")
         void update_ShouldPreserveOriginalId() {
-            Task original = taskService.create(new Task("Original"));
-            Long originalId = original.getId();
-
-            // Even if the update payload has a different ID, it should be ignored
+            Task existingTask = new Task(1L, "Original", false);
             Task updatePayload = new Task(999L, "Updated", true);
 
-            Task result = taskService.update(originalId, updatePayload);
+            when(taskRepository.findById(1L)).thenReturn(Optional.of(existingTask));
+            when(taskRepository.save(any(Task.class))).thenAnswer(i -> i.getArgument(0));
 
-            assertEquals(originalId, result.getId(), "ID must not change during update");
+            Task result = taskService.update(1L, updatePayload);
+
+            assertEquals(1L, result.getId(), "ID must not change during update");
+            verify(taskRepository, times(1)).save(existingTask);
         }
 
         @Test
-        @DisplayName("should throw TaskNotFoundException for a missing ID")
-        void update_NonExistentIdShouldThrowTaskNotFoundException() {
-            Task updatePayload = new Task("Does not matter");
+        @DisplayName("should throw TaskNotFoundException if ID is missing")
+        void update_NonExistentIdShouldThrowException() {
+            when(taskRepository.findById(99L)).thenReturn(Optional.empty());
 
-            TaskNotFoundException exception = assertThrows(
-                    TaskNotFoundException.class,
-                    () -> taskService.update(999L, updatePayload)
-            );
-            assertTrue(exception.getMessage().contains("999"),
-                    "Exception message should contain the missing ID");
+            assertThrows(TaskNotFoundException.class,
+                    () -> taskService.update(99L, new Task("Does not matter")));
+
+            verify(taskRepository, never()).save(any());
         }
 
         @Test
         @DisplayName("should reject a blank title")
         void update_BlankTitleShouldThrowIllegalArgumentException() {
-            Task original = taskService.create(new Task("Original"));
+            Task existingTask = new Task(1L, "Original", false);
             Task updatePayload = new Task("   "); // Blank title
+
+            when(taskRepository.findById(1L)).thenReturn(Optional.of(existingTask));
 
             assertThrows(
                     IllegalArgumentException.class,
-                    () -> taskService.update(original.getId(), updatePayload)
+                    () -> taskService.update(1L, updatePayload)
             );
+
+            verify(taskRepository, never()).save(any(Task.class));
         }
     }
 
@@ -220,23 +216,28 @@ public class TaskServiceTest {
     class DeleteTests {
 
         @Test
-        @DisplayName("should remove the task and return true for an existing ID")
-        void delete_ExistingIdShouldReturnTrueAndRemoveTask() {
-            Task task = taskService.create(new Task("To be deleted"));
-            Long id = task.getId();
+        @DisplayName("should return true and delete when ID exists")
+        void delete_ExistingId_ShouldReturnTrue() {
+            Long id = 1L;
+            when(taskRepository.existsById(id)).thenReturn(true);
 
             boolean result = taskService.delete(id);
 
-            assertTrue(result, "Delete should return true for existing ID");
-            assertTrue(taskService.findById(id).isEmpty(), "Task should no longer be found");
+            assertTrue(result);
+
+            verify(taskRepository, times(1)).deleteById(id);
+            verify(taskRepository, never()).findById(any());
         }
 
         @Test
-        @DisplayName("should return false for a missing ID")
-        void delete_MissingIdShouldReturnFalse() {
-            boolean result = taskService.delete(999L);
+        @DisplayName("should return false when ID is missing")
+        void delete_MissingId_ShouldReturnFalse() {
+            when(taskRepository.existsById(99L)).thenReturn(false);
 
-            assertFalse(result, "Delete should return false for missing ID");
+            boolean result = taskService.delete(99L);
+
+            assertFalse(result);
+            verify(taskRepository, never()).deleteById(any());
         }
 
         @Test
@@ -245,6 +246,9 @@ public class TaskServiceTest {
             boolean result = taskService.delete(null);
 
             assertFalse(result, "Delete should return false for null ID");
+
+            verify(taskRepository, never()).existsById(any());
+            verify(taskRepository, never()).deleteById(any());
         }
     }
 
