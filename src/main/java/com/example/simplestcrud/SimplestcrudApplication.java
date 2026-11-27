@@ -7,11 +7,13 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-@SpringBootApplication(scanBasePackages = {"com.example.crud", "com.example.simplestcrud"})
-@EntityScan(basePackages = "com.example.crud.model")
+@SpringBootApplication
+@ComponentScan(basePackages = {"com.example.simplestcrud", "com.example.crud"})
 @EnableJpaRepositories(basePackages = "com.example.crud.repository")
+@EntityScan("com.example.crud.model")
 public class SimplestcrudApplication {
 
     static void main(String[] args) {
